@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FFF6D6;
+  --ink: #1A1F5C;
+  --panel: #FFFFFF;
+  --muted: #5B6094;
+  --bulb-off: #E8D9A0;
+  --bulb-on: #FFC21A;
+  --hot: #FF2E88;
+  --ok: #19B36B;
+  --shade: rgba(26,31,92,.55);
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12164A; --ink: #FFF6D6; --panel: #1E2366; --muted: #A9AEE0;
+    --bulb-off: #3A3F86; --bulb-on: #FFC21A; --hot: #FF4D9A; --ok: #2BD687;
+    --shade: rgba(5,7,30,.7); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12164A; --ink: #FFF6D6; --panel: #1E2366; --muted: #A9AEE0;
+  --bulb-off: #3A3F86; --bulb-on: #FFC21A; --hot: #FF4D9A; --ok: #2BD687;
+  --shade: rgba(5,7,30,.7); color-scheme: dark;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 1.25rem 1rem 2rem;
+}
+h1 {
+  font-family: "Bungee", "Arial Black", Impact, sans-serif;
+  font-weight: 400; font-size: clamp(1.6rem, 6vw, 2.6rem);
+  margin: .25rem 0 .2rem; letter-spacing: .02em; text-align: center;
+}
+.target {
+  margin: 0 0 1rem; text-align: center; color: var(--muted);
+  font-size: 1.05rem; max-width: 34rem;
+}
+.target strong { color: var(--ink); font-weight: 800; }
+
+/* Marquee frame */
+.stage {
+  position: relative; width: min(100%, 640px);
+  padding: 22px; border-radius: 28px; background: var(--panel);
+  box-shadow: 0 0 0 4px var(--ink);
+}
+.bulbs { position: absolute; inset: 0; pointer-events: none; }
+.bulb {
+  position: absolute; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--bulb-off); transform: translate(-50%, -50%);
+  transition: background .1s, box-shadow .1s;
+}
+.lit .bulb { animation: chase .5s steps(1) infinite; }
+.lit .bulb:nth-child(odd) { animation-delay: .25s; }
+@keyframes chase {
+  0% { background: var(--bulb-on); box-shadow: 0 0 12px var(--bulb-on); }
+  50% { background: var(--bulb-off); box-shadow: none; }
+}
+.screen {
+  position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden;
+  background: #000;
+}
+video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+.banner {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  pointer-events: none; opacity: 0; transition: opacity .15s;
+}
+.lit .banner { opacity: 1; }
+.banner span {
+  font-family: "Bungee", "Arial Black", Impact, sans-serif;
+  font-size: clamp(2.2rem, 11vw, 5rem); color: #FFF6D6;
+  background: var(--hot); padding: .1em .45em; border-radius: 14px;
+  transform: rotate(-6deg); box-shadow: 0 6px 0 #1A1F5C;
+}
+.lit .banner span { animation: pop .35s cubic-bezier(.3,1.6,.5,1); }
+@keyframes pop { from { transform: rotate(-6deg) scale(.4); } to { transform: rotate(-6deg) scale(1); } }
+.flash { position: absolute; inset: 0; background: var(--hot); opacity: 0; pointer-events: none; }
+.lit .flash { animation: flash .6s ease-out; }
+@keyframes flash { from { opacity: .45; } to { opacity: 0; } }
+.placeholder {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: #FFF6D6; text-align: center; padding: 1.5rem; font-size: 1.05rem; line-height: 1.5;
+}
+.placeholder[hidden] { display: none; }
+
+.readout {
+  width: min(100%, 640px); margin-top: 1.1rem;
+  display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; justify-content: space-between;
+}
+.status { font-weight: 800; font-size: 1.1rem; }
+.status.on { color: var(--hot); }
+.meter { flex: 1 1 180px; height: 14px; border-radius: 7px; background: var(--bulb-off); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .2s; }
+.lit-page .meter i { background: var(--hot); }
+.controls { display: flex; gap: .6rem; }
+button {
+  font: inherit; font-weight: 600; cursor: pointer;
+  border: 3px solid var(--ink); border-radius: 999px;
+  background: var(--panel); color: var(--ink); padding: .5rem 1.1rem;
+}
+button.primary { background: var(--hot); color: #FFF6D6; border-color: var(--hot); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--bulb-on); outline-offset: 3px; }
+.tally { width: min(100%, 640px); margin: .9rem 0 0; color: var(--muted); font-size: .95rem; }
+
+/* Modal */
+.modal {
+  position: fixed; inset: 0; background: var(--shade);
+  display: grid; place-items: center; padding: 1rem; z-index: 10;
+}
+.modal[hidden] { display: none; }
+.card {
+  background: var(--panel); color: var(--ink); width: min(100%, 26rem);
+  border-radius: 24px; padding: 1.6rem 1.4rem 1.4rem;
+  box-shadow: 0 0 0 4px var(--ink), 0 10px 0 4px var(--ink);
+}
+.card h2 { font-family: "Bungee", "Arial Black", Impact, sans-serif; font-weight: 400; margin: 0 0 .4rem; font-size: 1.45rem; }
+.card p { margin: 0 0 1rem; color: var(--muted); }
+.card input {
+  width: 100%; font: inherit; font-size: 1.1rem; padding: .7rem .9rem;
+  border: 3px solid var(--ink); border-radius: 14px; background: var(--bg); color: var(--ink);
+}
+.card .row { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1rem; flex-wrap: wrap; }
+.ideas { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+.ideas button { font-size: .85rem; padding: .3rem .7rem; border-width: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lit .bulb, .lit .banner span, .lit .flash { animation: none; }
+  .lit .bulb { background: var(--bulb-on); }
+}
+</style>
+</head>
+<body>
+  <h1>The Detector</h1>
+  <p class="target" id="targetLine">Scanning for <strong id="targetText">…</strong></p>
+
+  <div class="stage" id="stage">
+    <div class="bulbs" id="bulbs" aria-hidden="true"></div>
+    <div class="screen">
+      <video id="video" playsinline muted></video>
+      <div class="flash"></div>
+      <div class="banner" aria-hidden="true"><span>DETECTED!</span></div>
+      <div class="placeholder" id="placeholder">Tell the Detector what to look for, and it will ask to use your camera.</div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <span class="status" id="status" role="status" aria-live="polite">Standing by</span>
+    <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+    <div class="controls">
+      <button id="muteBtn" type="button" aria-pressed="false">Sound on</button>
+      <button id="changeBtn" type="button">Change target</button>
+    </div>
+  </div>
+  <p class="tally" id="tally"></p>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <form class="card" id="form">
+      <h2 id="modalTitle">What are you trying to detect?</h2>
+      <p>Be specific. The Detector is extremely accurate.</p>
+      <input id="input" type="text" maxlength="60" placeholder="the best coworker ever" autocomplete="off" required>
+      <div class="ideas" id="ideas"></div>
+      <div class="row">
+        <button type="submit" class="primary">Start detecting</button>
+      </div>
+    </form>
+  </div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const video = $('video'), stage = $('stage'), statusEl = $('status'), meter = $('meter');
+  const modal = $('modal'), form = $('form'), input = $('input'), placeholder = $('placeholder');
+  const ideas = ['the best coworker ever', 'a certified genius', 'future employee of the month',
+                 'someone who definitely read the email', 'a Grade G sysadmin'];
+
+  // Build marquee bulbs around the frame
+  const bulbs = $('bulbs');
+  function layBulbs() {
+    bulbs.innerHTML = '';
+    const r = stage.getBoundingClientRect(), inset = 11, gap = 30;
+    const w = r.width - inset * 2, h = r.height - inset * 2;
+    const nx = Math.max(2, Math.round(w / gap)), ny = Math.max(2, Math.round(h / gap));
+    const add = (x, y) => { const b = document.createElement('i'); b.className = 'bulb'; b.style.left = x + 'px'; b.style.top = y + 'px'; bulbs.appendChild(b); };
+    for (let i = 0; i < nx; i++) add(inset + (w * i) / nx, inset);
+    for (let i = 0; i < ny; i++) add(inset + w, inset + (h * i) / ny);
+    for (let i = nx; i > 0; i--) add(inset + (w * i) / nx, inset + h);
+    for (let i = ny; i > 0; i--) add(inset, inset + (h * i) / ny);
+  }
+  layBulbs();
+  addEventListener('resize', layBulbs);
+
+  ideas.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = t;
+    b.onclick = () => { input.value = t; input.focus(); };
+    $('ideas').appendChild(b);
+  });
+
+  let target = '', running = false, muted = false, detected = false, hits = 0;
+  let audio;
+  setTimeout(() => input.focus(), 50);
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    target = input.value.trim() || 'the best coworker ever';
+    $('targetText').textContent = target;
+    modal.hidden = true;
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+    if (!running) startCamera();
+    setStatus(false);
+  });
+  $('changeBtn').onclick = () => { modal.hidden = false; input.select(); input.focus(); };
+  $('muteBtn').onclick = e => {
+    muted = !muted;
+    e.target.textContent = muted ? 'Sound off' : 'Sound on';
+    e.target.setAttribute('aria-pressed', String(muted));
+  };
+
+  async function startCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return fail('This browser can’t share a camera with web pages. Try Chrome, Edge, or Safari.');
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      video.srcObject = stream;
+      await video.play();
+      placeholder.hidden = true;
+      running = true;
+      loop();
+    } catch (err) {
+      fail(err.name === 'NotAllowedError'
+        ? 'Camera access was blocked. Allow the camera in your browser’s address bar, or open this page in its own browser tab, then reload.'
+        : 'No camera found. Plug one in or open this page on a device with a camera, then reload.');
+    }
+  }
+  function fail(msg) { placeholder.textContent = msg; placeholder.hidden = false; statusEl.textContent = 'Camera unavailable'; }
+
+  // Detection: native FaceDetector where supported, else a skin-tone heuristic in the middle of the frame
+  const native = ('FaceDetector' in window) ? new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 }) : null;
+  let nativeWorks = !!native;
+  const cv = document.createElement('canvas'); cv.width = 80; cv.height = 60;
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  let score = 0;
+
+  function skinScore() {
+    cx.drawImage(video, 0, 0, cv.width, cv.height);
+    const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+    let skin = 0, total = 0;
+    const mx = cv.width / 2, my = cv.height * 0.45, rx = cv.width * 0.28, ry = cv.height * 0.4;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      const dx = (x - mx) / rx, dy = (y - my) / ry;
+      if (dx * dx + dy * dy > 1) continue;
+      const i = (y * cv.width + x) * 4, r = d[i], g = d[i + 1], b = d[i + 2];
+      const Y = 0.299 * r + 0.587 * g + 0.114 * b;
+      const Cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+      const Cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+      total++;
+      if (Y > 40 && Cb >= 77 && Cb <= 127 && Cr >= 135 && Cr <= 175) skin++;
+    }
+    return total ? skin / total : 0;
+  }
+
+  async function sample() {
+    if (nativeWorks) {
+      try { const faces = await native.detect(video); return faces.length ? 1 : 0; }
+      catch (_) { nativeWorks = false; }
+    }
+    return Math.min(1, skinScore() / 0.35);
+  }
+
+  async function loop() {
+    if (video.readyState >= 2) {
+      const s = await sample();
+      score = score * 0.7 + s * 0.3;
+      meter.style.width = Math.round(score * 100) + '%';
+      if (!modal.hidden) { /* paused while choosing a target */ }
+      else if (!detected && score > 0.6) setStatus(true);
+      else if (detected && score < 0.35) setStatus(false);
+    }
+    setTimeout(() => requestAnimationFrame(loop), 120);
+  }
+
+  function setStatus(on) {
+    detected = on;
+    stage.classList.toggle('lit', on);
+    document.body.classList.toggle('lit-page', on);
+    statusEl.classList.toggle('on', on);
+    if (on) {
+      hits++;
+      statusEl.textContent = `${capital(target)} detected`;
+      $('tally').textContent = `Detected ${hits} ${hits === 1 ? 'time' : 'times'} this session. Confidence: ${(99 + Math.random()).toFixed(1)}%.`;
+      ding();
+    } else {
+      statusEl.textContent = running ? `Scanning for ${target}…` : 'Standing by';
+    }
+  }
+  const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function ding() {
+    if (muted || !audio) return;
+    try {
+      audio.resume();
+      const t = audio.currentTime;
+      [880, 1175, 1568].forEach((f, i) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'square'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + i * 0.09);
+        g.gain.exponentialRampToValueAtTime(0.12, t + i * 0.09 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.18);
+        o.connect(g).connect(audio.destination);
+        o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.2);
+      });
+    } catch (_) {}
+  }
+})();
+</script>
+</body>
+</html>
