@@ -252,7 +252,7 @@ const detectorReady = (async () => {
     baseOptions: { modelAssetPath: MODEL, delegate },
     runningMode: 'VIDEO', minDetectionConfidence: 0.2
   });
-  try { return await make('GPU'); } catch (_) { return await make('CPU'); }
+  try { return await make('CPU'); } catch (_) { return await make('GPU'); }
 })();
 detectorReady.then(
   () => { modeEl.textContent = 'Face model ready.'; },
@@ -290,16 +290,23 @@ async function startCamera() {
   } catch (err) {
     if (err && err.name === 'NotAllowedError') fail('Camera access was blocked. Allow the camera in your browser’s address bar, then reload.');
     else if (err && err.name === 'NotFoundError') fail('No camera found. Open this page on a device with a camera, then reload.');
+    else modeEl.textContent = 'Detector error: ' + (err && err.message ? err.message : err);
   }
 }
 function fail(msg) { placeholder.textContent = msg; placeholder.hidden = false; statusEl.textContent = 'Camera unavailable'; }
 
-let score = 0, aboveSince = 0, lastTime = -1;
+let score = 0, aboveSince = 0, lastTime = -1, lastReadout = 0;
 function loop(detector) {
   const now = performance.now();
   if (video.readyState >= 2 && video.currentTime !== lastTime) {
     lastTime = video.currentTime;
-    const res = detector.detectForVideo(video, now);
+    let res;
+    try { res = detector.detectForVideo(video, now); }
+    catch (e) {
+      modeEl.textContent = 'Detector error: ' + (e && e.message ? e.message : e);
+      requestAnimationFrame(() => loop(detector));
+      return;
+    }
     let best = null;
     for (const d of res.detections) {
       const s = d.categories[0]?.score ?? 0;
@@ -316,6 +323,10 @@ function loop(detector) {
       else if (detected && score < cut * 0.6) setStatus(false);
     }
     drawBox(best && best.s > cut ? best : null);
+    if (now - lastReadout > 400) {
+      lastReadout = now;
+      modeEl.textContent = `Face model ready. Faces seen: ${res.detections.length}, confidence ${(raw * 100).toFixed(0)}%.`;
+    }
   }
   requestAnimationFrame(() => loop(detector));
 }
