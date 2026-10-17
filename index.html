@@ -142,8 +142,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--bulb-on); o
   border: 3px solid var(--ink); border-radius: 14px; background: var(--bg); color: var(--ink);
 }
 .card .row { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1rem; flex-wrap: wrap; }
-.ideas { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
-.ideas button { font-size: .85rem; padding: .3rem .7rem; border-width: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
   .lit .bulb, .lit .banner span, .lit .flash { animation: none; }
@@ -187,7 +185,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--bulb-on); o
       <h2 id="modalTitle">What are you trying to detect?</h2>
       <p>Be specific. The Detector is extremely accurate.</p>
       <input id="input" type="text" maxlength="60" placeholder="the best coworker ever" autocomplete="off" required>
-      <div class="ideas" id="ideas"></div>
       <div class="row">
         <button type="submit" class="primary">Start detecting</button>
       </div>
@@ -201,8 +198,6 @@ const $ = id => document.getElementById(id);
 const video = $('video'), stage = $('stage'), statusEl = $('status'), meter = $('meter');
 const modal = $('modal'), form = $('form'), input = $('input'), placeholder = $('placeholder');
 const overlay = $('overlay'), ox = overlay.getContext('2d');
-const ideas = ['the best coworker ever', 'a certified genius', 'future employee of the month',
-               'someone who definitely read the email', 'a Grade G sysadmin'];
 
 // Marquee bulbs around the frame
 const bulbs = $('bulbs');
@@ -219,13 +214,6 @@ function layBulbs() {
 }
 layBulbs();
 addEventListener('resize', layBulbs);
-
-ideas.forEach(t => {
-  const b = document.createElement('button');
-  b.type = 'button'; b.textContent = t;
-  b.onclick = () => { input.value = t; input.focus(); };
-  $('ideas').appendChild(b);
-});
 
 let target = '', running = false, muted = false, detected = false, hits = 0, audio;
 setTimeout(() => input.focus(), 50);
